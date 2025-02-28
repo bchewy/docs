@@ -1,0 +1,210 @@
+---
+title: 'Room 1 API Reference'
+description: 'Complete API documentation for Room 1: Life Montage'
+---
+
+# Room 1 API Reference
+
+This document provides complete documentation for the Room 1 backend API. These endpoints enable the VR frontend to interact with the image processing and memory orb generation services.
+
+All endpoints are RESTful and return JSON responses unless otherwise specified.
+
+## Base URL
+
+```
+http://hostname:5001/api/v1
+```
+
+## Authentication
+
+Authentication is handled via API keys passed in the request header:
+
+```http
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Endpoints
+
+### Image Sorting
+
+#### Get Images by Category
+
+```http
+GET /images/sort/category
+```
+
+Returns all images sorted into their respective categories.
+
+**Parameters**:
+- None
+
+**Response**:
+```json
+{
+  "categories": {
+    "family": [
+      {"path": "/storage/family/photo1.jpg", "metadata": {...}},
+      {"path": "/storage/family/photo2.jpg", "metadata": {...}}
+    ],
+    "travel": [
+      {"path": "/storage/travel/trip1.jpg", "metadata": {...}},
+      {"path": "/storage/travel/trip2.jpg", "metadata": {...}}
+    ]
+  }
+}
+```
+
+#### Get Images Chronologically
+
+```http
+GET /images/sort/chronological
+```
+
+Returns all images sorted by capture date and time.
+
+**Parameters**:
+- `start_date` (optional): Filter images taken after this date (format: YYYY-MM-DD)
+- `end_date` (optional): Filter images taken before this date (format: YYYY-MM-DD)
+
+**Response**:
+```json
+{
+  "images": [
+    {"path": "/storage/oldest_image.jpg", "date": "2018-01-15T12:30:45", "metadata": {...}},
+    {"path": "/storage/newer_image.jpg", "date": "2019-03-22T08:15:30", "metadata": {...}},
+    {"path": "/storage/newest_image.jpg", "date": "2022-11-05T17:45:12", "metadata": {...}}
+  ]
+}
+```
+
+#### Get Image Metadata
+
+```http
+GET /images/metadata
+```
+
+Returns detailed metadata for all images.
+
+**Parameters**:
+- `image_id` (optional): Get metadata for a specific image
+
+**Response**:
+```json
+{
+  "metadata": [
+    {
+      "path": "/storage/image1.jpg",
+      "filename": "image1.jpg",
+      "size": 1024567,
+      "dimensions": {"width": 1920, "height": 1080},
+      "date_taken": "2022-05-15T14:30:22",
+      "location": {"latitude": 40.7128, "longitude": -74.0060},
+      "camera": "iPhone 13 Pro",
+      "tags": ["family", "vacation"],
+      "category": "travel"
+    }
+  ]
+}
+```
+
+### Memory Orb Generation
+
+#### Generate Orb
+
+```http
+POST /orbs/generate
+```
+
+Generates a memory orb texture based on the provided image.
+
+**Request Body**:
+```json
+{
+  "image_path": "/storage/image1.jpg",
+  "category": "family"
+}
+```
+
+**Response**:
+```json
+{
+  "orb_texture_path": "/storage/orbs/family_image1_orb.jpg",
+  "category": "family",
+  "color": {"r": 64, "g": 128, "b": 255},
+  "original_image": "/storage/image1.jpg"
+}
+```
+
+#### Generate Preview Thumbnail
+
+```http
+POST /orbs/preview
+```
+
+Creates a preview thumbnail for an image.
+
+**Request Body**:
+```json
+{
+  "image_path": "/storage/image1.jpg"
+}
+```
+
+**Response**:
+```json
+{
+  "thumbnail_path": "/storage/thumbnails/image1_thumb.jpg",
+  "dimensions": {"width": 256, "height": 144}
+}
+```
+
+### Health Check
+
+#### Check API Status
+
+```http
+GET /health
+```
+
+Returns the health status of the API.
+
+**Parameters**:
+- None
+
+**Response**:
+```json
+{
+  "status": "healthy",
+  "version": "1.0.3",
+  "uptime": "3d 5h 12m"
+}
+```
+
+## Error Handling
+
+All errors follow a consistent format:
+
+```json
+{
+  "error": true,
+  "code": 404,
+  "message": "Image not found",
+  "details": "The requested image at path /storage/missing.jpg does not exist"
+}
+```
+
+Common error codes:
+- `400`: Bad Request - Missing or invalid parameters
+- `401`: Unauthorized - Authentication required
+- `403`: Forbidden - Insufficient permissions
+- `404`: Not Found - Resource does not exist
+- `500`: Internal Server Error - Something went wrong on the server
+
+## Rate Limiting
+
+The API implements rate limiting to prevent abuse. Limits are as follows:
+
+- 100 requests per minute per API key
+- 5,000 requests per day per API key
+
+When rate limits are exceeded, the API returns a `429 Too Many Requests` status code. 

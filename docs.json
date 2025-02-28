@@ -35,6 +35,27 @@
         ]
       },
       {
+        "tab": "VR4BIZ",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "vr4biz/introduction",
+              "vr4biz/architecture",
+              "vr4biz/installation"
+            ]
+          },
+          {
+            "group": "Room 1: Life Montage",
+            "pages": [
+              "vr4biz/room1/overview",
+              "vr4biz/room1/api-reference",
+              "vr4biz/room1/integration"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "API Reference",
         "groups": [
           {

@@ -1,0 +1,388 @@
+---
+title: 'Room 1 Integration Guide'
+description: 'Instructions for integrating Room 1 with VR frontends and external systems'
+---
+
+# Integration Guide
+
+This guide explains how to integrate the Room 1 backend with various VR frontends and external systems.
+
+## Integrating with VR Frontends
+
+### Unity Integration
+
+Room 1 can be easily integrated with Unity-based VR applications using REST API calls.
+
+#### Setup Steps
+
+1. Add the following script to your Unity project:
+
+```csharp
+using System;
+using System.Collections;
+using UnityEngine;
+using UnityEngine.Networking;
+using Newtonsoft.Json;
+
+public class Room1APIClient : MonoBehaviour
+{
+    [SerializeField] private string baseUrl = "http://localhost:5001/api/v1";
+    [SerializeField] private string apiKey = "your-api-key";
+    
+    // Get images sorted by category
+    public IEnumerator GetImagesByCategory(Action<ImageCategoryResponse> callback)
+    {
+        using (UnityWebRequest request = UnityWebRequest.Get($"{baseUrl}/images/sort/category"))
+        {
+            request.SetRequestHeader("Authorization", $"Bearer {apiKey}");
+            yield return request.SendWebRequest();
+            
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                var response = JsonConvert.DeserializeObject<ImageCategoryResponse>(request.downloadHandler.text);
+                callback(response);
+            }
+            else
+            {
+                Debug.LogError($"Error: {request.error}");
+                callback(null);
+            }
+        }
+    }
+    
+    // Generate memory orb
+    public IEnumerator GenerateOrb(string imagePath, string category, Action<OrbResponse> callback)
+    {
+        var requestData = new OrbRequest
+        {
+            image_path = imagePath,
+            category = category
+        };
+        
+        string jsonData = JsonConvert.SerializeObject(requestData);
+        
+        using (UnityWebRequest request = new UnityWebRequest($"{baseUrl}/orbs/generate", "POST"))
+        {
+            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonData);
+            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+            request.SetRequestHeader("Authorization", $"Bearer {apiKey}");
+            
+            yield return request.SendWebRequest();
+            
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                var response = JsonConvert.DeserializeObject<OrbResponse>(request.downloadHandler.text);
+                callback(response);
+            }
+            else
+            {
+                Debug.LogError($"Error: {request.error}");
+                callback(null);
+            }
+        }
+    }
+    
+    // Add more API methods as needed...
+}
+
+// Data models
+[Serializable]
+public class ImageCategoryResponse
+{
+    public Dictionary<string, List<ImageData>> categories;
+}
+
+[Serializable]
+public class ImageData
+{
+    public string path;
+    public Dictionary<string, object> metadata;
+}
+
+[Serializable]
+public class OrbRequest
+{
+    public string image_path;
+    public string category;
+}
+
+[Serializable]
+public class OrbResponse
+{
+    public string orb_texture_path;
+    public string category;
+    public ColorData color;
+    public string original_image;
+}
+
+[Serializable]
+public class ColorData
+{
+    public int r;
+    public int g;
+    public int b;
+}
+```
+
+2. Attach the `Room1APIClient` script to a GameObject in your scene
+3. Configure the `baseUrl` and `apiKey` in the Inspector
+
+#### Example Usage
+
+```csharp
+public class OrbManager : MonoBehaviour
+{
+    [SerializeField] private Room1APIClient apiClient;
+    
+    private void Start()
+    {
+        // Get images sorted by category
+        StartCoroutine(apiClient.GetImagesByCategory(OnCategoriesReceived));
+    }
+    
+    private void OnCategoriesReceived(ImageCategoryResponse response)
+    {
+        if (response != null)
+        {
+            foreach (var category in response.categories)
+            {
+                Debug.Log($"Category: {category.Key}, Images: {category.Value.Count}");
+                
+                // Generate orbs for each image
+                foreach (var image in category.Value)
+                {
+                    StartCoroutine(apiClient.GenerateOrb(image.path, category.Key, OnOrbGenerated));
+                }
+            }
+        }
+    }
+    
+    private void OnOrbGenerated(OrbResponse response)
+    {
+        if (response != null)
+        {
+            // Load the orb texture and create orb in the scene
+            StartCoroutine(LoadOrbTexture(response));
+        }
+    }
+    
+    private IEnumerator LoadOrbTexture(OrbResponse response)
+    {
+        using (UnityWebRequest request = UnityWebRequestTexture.GetTexture(response.orb_texture_path))
+        {
+            yield return request.SendWebRequest();
+            
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                Texture2D texture = DownloadHandlerTexture.GetContent(request);
+                CreateOrb(texture, response);
+            }
+        }
+    }
+    
+    private void CreateOrb(Texture2D texture, OrbResponse response)
+    {
+        // Create and configure orb GameObject with the texture
+        // This implementation will depend on your specific VR environment
+    }
+}
+```
+
+### Unreal Engine Integration
+
+For Unreal Engine integration, you can use the HTTP module to communicate with the Room 1 backend.
+
+```cpp
+// Room1APIClient.h
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "Http.h"
+#include "Room1APIClient.generated.h"
+
+USTRUCT(BlueprintType)
+struct FImageData
+{
+    GENERATED_BODY()
+    
+    UPROPERTY(BlueprintReadWrite, Category = "API")
+    FString Path;
+    
+    UPROPERTY(BlueprintReadWrite, Category = "API")
+    TMap<FString, FString> Metadata;
+};
+
+USTRUCT(BlueprintType)
+struct FImageCategoryResponse
+{
+    GENERATED_BODY()
+    
+    UPROPERTY(BlueprintReadWrite, Category = "API")
+    TMap<FString, TArray<FImageData>> Categories;
+};
+
+UCLASS()
+class VR4BIZ_API ARoom1APIClient : public AActor
+{
+    GENERATED_BODY()
+    
+public:
+    ARoom1APIClient();
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "API")
+    FString BaseUrl = "http://localhost:5001/api/v1";
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "API")
+    FString ApiKey = "your-api-key";
+    
+    UFUNCTION(BlueprintCallable, Category = "API")
+    void GetImagesByCategory();
+    
+    UFUNCTION(BlueprintCallable, Category = "API")
+    void GenerateOrb(const FString& ImagePath, const FString& Category);
+    
+protected:
+    virtual void BeginPlay() override;
+    
+private:
+    FHttpModule* Http;
+    
+    void OnCategoriesResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess);
+    void OnOrbResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess);
+};
+```
+
+## Integrating with External Systems
+
+### Web Applications
+
+You can integrate Room 1 with web applications by making direct API calls:
+
+```javascript
+// Example JavaScript code for web integration
+async function fetchImagesByCategory() {
+  const response = await fetch('http://localhost:5001/api/v1/images/sort/category', {
+    headers: {
+      'Authorization': 'Bearer your-api-key'
+    }
+  });
+  
+  const data = await response.json();
+  return data;
+}
+
+async function generateOrb(imagePath, category) {
+  const response = await fetch('http://localhost:5001/api/v1/orbs/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer your-api-key'
+    },
+    body: JSON.stringify({
+      image_path: imagePath,
+      category: category
+    })
+  });
+  
+  const data = await response.json();
+  return data;
+}
+```
+
+### Mobile Applications
+
+For React Native applications:
+
+```javascript
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList } from 'react-native';
+
+const API_BASE_URL = 'http://your-server:5001/api/v1';
+const API_KEY = 'your-api-key';
+
+const Room1Integration = () => {
+  const [categories, setCategories] = useState({});
+  
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+  
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/images/sort/category`, {
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`
+        }
+      });
+      
+      const data = await response.json();
+      setCategories(data.categories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+  
+  return (
+    <View>
+      <Text>Images by Category</Text>
+      {Object.entries(categories).map(([category, images]) => (
+        <View key={category}>
+          <Text>{category} ({images.length} images)</Text>
+          <FlatList
+            data={images}
+            keyExtractor={(item) => item.path}
+            renderItem={({ item }) => (
+              <Text>{item.path}</Text>
+            )}
+          />
+        </View>
+      ))}
+    </View>
+  );
+};
+
+export default Room1Integration;
+```
+
+## Security Considerations
+
+When integrating Room 1 with external systems, consider these security best practices:
+
+1. **API Key Management**: 
+   - Never hardcode API keys in client-side code
+   - Use environment variables or secure storage
+   - Rotate API keys periodically
+
+2. **Cross-Origin Resource Sharing (CORS)**:
+   - Configure CORS on the backend to restrict access to authorized domains
+
+3. **Input Validation**:
+   - Validate all input on both client and server sides
+   - Sanitize file paths to prevent directory traversal attacks
+
+4. **Error Handling**:
+   - Implement proper error handling to prevent information disclosure
+   - Log errors securely for debugging
+
+## Troubleshooting Integration Issues
+
+### Common Problems
+
+1. **Connection Refused**:
+   - Ensure the Room 1 backend is running
+   - Check network connectivity and firewall settings
+
+2. **Authentication Errors**:
+   - Verify API key is correct and properly formatted in headers
+   - Check API key has not expired or been revoked
+
+3. **Missing Resources**:
+   - Confirm file paths exist on the server
+   - Verify storage directory configuration is correct
+
+4. **Performance Issues**:
+   - Implement caching for frequently accessed resources
+   - Use thumbnail previews rather than full images when appropriate 

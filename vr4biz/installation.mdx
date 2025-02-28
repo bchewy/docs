@@ -1,0 +1,113 @@
+---
+title: 'VR4BIZ Installation'
+description: 'Step-by-step guide to installing and configuring VR4BIZ'
+---
+
+# Installation Guide
+
+This guide will walk you through the process of setting up VR4BIZ for your business environment. The installation involves setting up both backend services and the VR frontend application.
+
+## Prerequisites
+
+Before installing VR4BIZ, ensure you have the following:
+
+- **Hardware Requirements**:
+  - VR-capable workstation or laptop (for development/administration)
+  - VR headsets for end-users (Oculus, HTC Vive, etc.)
+  - Server for hosting backend services (if using client-server deployment)
+
+- **Software Requirements**:
+  - Python 3.7+ (for backend services)
+  - Unity/Unreal Engine (depending on your VR frontend implementation)
+  - Git for version control
+  - Web server (optional, for hosting web-based admin interfaces)
+
+## Backend Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/vr4biz.git
+cd vr4biz
+```
+
+### 2. Set Up Individual Room Backends
+
+#### Room 1: Life Montage
+
+```bash
+cd backend/room1
+pip install -r requirements.txt
+```
+
+Create a `.env` file for configuration:
+
+```bash
+# Example .env file
+STORAGE_PATH=/path/to/your/images
+CUSTOM_CATEGORIES=weddings,graduation,birthdays
+```
+
+### 3. Start the Backend Services
+
+```bash
+cd backend/room1
+python main.py
+```
+
+The Room 1 backend will start running on `http://localhost:5001` by default.
+
+## VR Frontend Installation
+
+### 1. Set Up the VR Project
+
+1. Open your VR development environment (Unity/Unreal)
+2. Clone or download the VR frontend project
+3. Open the project in your development environment
+
+### 2. Configure Backend Connection
+
+1. Navigate to the configuration settings in your VR project
+2. Set the backend service URLs to match your deployment:
+   ```
+   Room1Service: http://your-server-ip:5001
+   ```
+
+### 3. Build and Deploy
+
+1. Build the VR application for your target platforms
+2. Deploy to your VR devices following the standard procedures for your chosen platform
+
+## Verification
+
+To verify your installation:
+
+1. Ensure all backend services are running
+2. Connect with a VR device
+3. Launch the VR4BIZ application
+4. Confirm you can access and interact with the virtual environments
+
+## Troubleshooting
+
+### Common Issues
+
+- **Backend Connection Failures**:
+  - Check that backend services are running
+  - Verify network connectivity between VR clients and backend servers
+  - Ensure firewall rules allow the necessary traffic
+
+- **Missing Assets**:
+  - Verify that the storage paths in your configuration are correct
+  - Check file permissions on the storage directories
+
+- **Performance Issues**:
+  - Adjust graphics settings in the VR application
+  - Optimize network settings for better response times
+
+## Next Steps
+
+After successful installation:
+
+1. Proceed to the [Room 1: Life Montage](/vr4biz/room1/overview) section to learn how to use this module
+2. Set up user accounts and permissions
+3. Configure your virtual environments for your specific business needs 
